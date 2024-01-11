@@ -1,10 +1,12 @@
-from fastapi import FastAPI,Depends
+from fastapi import FastAPI,Depends,UploadFile,HTTPException
+from typing import Annotated
 from fastapi.middleware.cors import CORSMiddleware
 from db.database import engine,SessionLocal
 from sqlalchemy.orm import Session
 import schemas.Img as schemas
 import models.Img as models
 from crud.crud import get_imges,add_imges
+import re
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -31,6 +33,13 @@ def img_all(db:Session=Depends(get_db)):
     return imges
 
 @app.post('/',response_model=schemas.Img)
-def img_all(img:schemas.Img,db:Session=Depends(get_db)):
-    imges=add_imges(db,img)
-    return imges
+def img_all(file:UploadFile,db:Session=Depends(get_db)):
+    size = len(file.file.read())
+    if(file.content_type == "image/png" and size<=(3*1024*1024)):
+        tmp=re.sub(".*/","",file.filename)
+        print (tmp)
+        img=schemas.Img(path=tmp)
+        imges=add_imges(db,img)
+        return imges
+    raise HTTPException(status_code=413)
+    
